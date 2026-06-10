@@ -1,0 +1,20 @@
+[
+    {
+        "id": "P1",
+        "tiempo_arribo": 0,
+        "rafaga_cpu": 8,
+        "prioridad": 3
+    },
+    {
+        "id": "P2",
+        "tiempo_arribo": 1,
+        "rafaga_cpu": 4,
+        "prioridad": 1
+    },
+    {
+        "id": "P3",
+        "tiempo_arribo": 2,
+        "rafaga_cpu": 9,
+        "prioridad": 2
+    }
+]
