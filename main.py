@@ -14,5 +14,11 @@ def main():
     simulador_sjf.cargar_procesos("data/lote_inicial.json")
     simulador_sjf.simular_sjf()
 
+    # --- PRUEBA ROUND ROBIN ---
+    # Usaremos un quantum de 3 milisegundos
+    simulador_rr = Planificador()
+    simulador_rr.cargar_procesos("data/lote_inicial.json")
+    simulador_rr.simular_rr(quantum=3)
+
 if __name__ == "__main__":
     main()
