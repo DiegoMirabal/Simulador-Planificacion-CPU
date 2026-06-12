@@ -14,5 +14,10 @@ def main():
     for proceso in simulador.lista_procesos:
         print(proceso)
 
+    
+    # 4. Iniciar algoritmo FCFS
+    simulador.simular_fcfs()
+    
 if __name__ == "__main__":
     main()
+    
