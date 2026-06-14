@@ -179,3 +179,52 @@ class Planificador:
                     # El proceso no ha terminado, vuelve al final de la cola (Rotación)
                     proceso_actual.estado = "Listo"
                     cola_listos.append(proceso_actual)
+    
+    def simular_prioridades(self):
+        print("\n--- Iniciando Simulación Prioridades (Expropiativo) ---")
+        tiempo_actual = 0
+        
+        procesos_pendientes = self.lista_procesos.copy()
+        cola_listos = []
+        procesos_completados = 0
+        n = len(self.lista_procesos)
+
+        while procesos_completados < n:
+            
+            # 1. Verificar quién acaba de llegar en este milisegundo
+            llegados_ahora = [p for p in procesos_pendientes if p.tiempo_arribo == tiempo_actual]
+            for p in llegados_ahora:
+                cola_listos.append(p)
+                procesos_pendientes.remove(p)
+
+            # 2. Si hay alguien en la cola, decidir quién usa la CPU
+            if len(cola_listos) > 0:
+                # LA MAGIA DE PRIORIDADES: Ordenamos por el atributo prioridad.
+                # (Menor número = Mayor prioridad. Desempate por tiempo de arribo).
+                cola_listos.sort(key=lambda x: (x.prioridad, x.tiempo_arribo))
+                
+                proceso_actual = cola_listos[0]
+                
+                # Registramos su primera vez en la CPU y actualizamos estado
+                proceso_actual.registrar_ejecucion(tiempo_actual)
+                proceso_actual.estado = "Ejecutando"
+                
+                # El proceso consume 1 milisegundo de CPU
+                proceso_actual.rafaga_restante -= 1
+                
+                # 3. ¿El proceso acaba de terminar?
+                if proceso_actual.rafaga_restante == 0:
+                    proceso_actual.tiempo_finalizacion = tiempo_actual + 1
+                    proceso_actual.tiempo_retorno = proceso_actual.tiempo_finalizacion - proceso_actual.tiempo_arribo
+                    proceso_actual.tiempo_espera = proceso_actual.tiempo_retorno - proceso_actual.rafaga_cpu
+                    proceso_actual.tiempo_respuesta = proceso_actual.tiempo_primera_ejecucion - proceso_actual.tiempo_arribo
+                    proceso_actual.estado = "Terminado"
+                    
+                    self.procesos_terminados.append(proceso_actual)
+                    cola_listos.remove(proceso_actual)
+                    procesos_completados += 1
+                    
+                    print(f"[{proceso_actual.id}] Finalizó en ms: {tiempo_actual + 1} | Retorno: {proceso_actual.tiempo_retorno} | Espera: {proceso_actual.tiempo_espera}")
+            
+            # Avanzamos el reloj maestro 1 milisegundo
+            tiempo_actual += 1

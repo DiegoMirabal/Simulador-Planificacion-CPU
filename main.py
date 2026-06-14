@@ -20,5 +20,10 @@ def main():
     simulador_rr.cargar_procesos("data/lote_inicial.json")
     simulador_rr.simular_rr(quantum=3)
 
+    # --- PRUEBA PRIORIDADES (NUEVO) ---
+    simulador_prio = Planificador()
+    simulador_prio.cargar_procesos("data/lote_inicial.json")
+    simulador_prio.simular_prioridades()
+    
 if __name__ == "__main__":
     main()
