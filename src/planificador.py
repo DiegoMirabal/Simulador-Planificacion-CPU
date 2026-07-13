@@ -7,6 +7,7 @@ class Planificador:
         self.reloj = 0
         self.lista_procesos = []
         self.procesos_terminados = []
+        self.historial_cpu = []
 
     def cargar_procesos(self, ruta_archivo):
         """Lee el JSON y convierte cada registro en un objeto Proceso."""
@@ -31,24 +32,27 @@ class Planificador:
     def simular_fcfs(self):
         print("\n--- Iniciando Simulación FCFS ---")
         tiempo_actual = 0
+        self.historial_cpu = [] # Limpiamos el historial al iniciar
         
-        # 1. Ordenamos la cola de listos por tiempo de llegada (Arribo)
         cola_fcfs = sorted(self.lista_procesos, key=lambda p: p.tiempo_arribo)
         
         for proceso in cola_fcfs:
-            # 2. Si la CPU está inactiva (ej. el proceso llega en el ms 5, pero estamos en el 3)
-            if tiempo_actual < proceso.tiempo_arribo:
-                tiempo_actual = proceso.tiempo_arribo
+            # Si la CPU está inactiva esperando a que llegue este proceso
+            while tiempo_actual < proceso.tiempo_arribo:
+                self.historial_cpu.append("Inactivo")
+                tiempo_actual += 1
                 
-            # 3. El proceso entra a la CPU
             proceso.registrar_ejecucion(tiempo_actual)
             proceso.estado = "Ejecutando"
             
-            # 4. Avanza el reloj de la simulación (Consume toda su ráfaga)
-            tiempo_actual += proceso.rafaga_cpu
+            # Por cada milisegundo de su ráfaga, registramos su ID en la línea de tiempo
+            for _ in range(proceso.rafaga_cpu):
+                self.historial_cpu.append(proceso.id)
+                tiempo_actual += 1
+            
             proceso.rafaga_restante = 0
             
-            # 5. Cálculos matemáticos de cierre (Basado en tus fórmulas del cuaderno)
+            # Cálculos matemáticos (intactos)
             proceso.tiempo_finalizacion = tiempo_actual
             proceso.tiempo_retorno = proceso.tiempo_finalizacion - proceso.tiempo_arribo
             proceso.tiempo_espera = proceso.tiempo_retorno - proceso.rafaga_cpu
@@ -57,7 +61,6 @@ class Planificador:
             
             self.procesos_terminados.append(proceso)
             
-            # Imprimimos el log para auditoría
             print(f"[{proceso.id}] Finalizó en ms: {tiempo_actual} | Retorno: {proceso.tiempo_retorno} | Espera: {proceso.tiempo_espera}")
     
     def simular_sjf(self):
@@ -81,11 +84,10 @@ class Planificador:
 
             # 2. Si hay alguien en la cola, decidir quién usa la CPU
             if len(cola_listos) > 0:
-                # LA MAGIA DE SJF: Ordenamos la cola por la ráfaga que les queda.
+                # se ordena la cola por la ráfaga que les queda.
                 # (En caso de empate, ordenamos por tiempo de llegada)
                 cola_listos.sort(key=lambda x: (x.rafaga_restante, x.tiempo_arribo))
-                
-                # El proceso con menor ráfaga restante siempre estará en la posición 0
+                # El proceso con menor ráfaga restante se pone en la posición 0
                 proceso_actual = cola_listos[0]
                 
                 # Registramos su primera vez en la CPU (si aplica) y actualizamos estado
@@ -94,6 +96,7 @@ class Planificador:
                 
                 # El proceso consume 1 milisegundo de CPU
                 proceso_actual.rafaga_restante -= 1
+                self.historial_cpu.append(proceso_actual.id)
                 
                 # 3. ¿El proceso acaba de terminar?
                 if proceso_actual.rafaga_restante == 0:
@@ -109,13 +112,15 @@ class Planificador:
                     procesos_completados += 1
                     
                     print(f"[{proceso_actual.id}] Finalizó en ms: {tiempo_actual + 1} | Retorno: {proceso_actual.tiempo_retorno} | Espera: {proceso_actual.tiempo_espera}")
+            else:
+                self.historial_cpu.append("Inactivo")
             
-            # Avanzamos el reloj maestro 1 milisegundo
             tiempo_actual += 1
             
     def simular_rr(self, quantum=2):
         print(f"\n--- Iniciando Simulación Round Robin (Quantum = {quantum}) ---")
         tiempo_actual = 0
+        self.historial_cpu = []
         
         procesos_pendientes = self.lista_procesos.copy()
         cola_listos = []
@@ -127,10 +132,11 @@ class Planificador:
             # Si la CPU está inactiva y la cola vacía, adelantamos el reloj hasta el próximo arribo
             if len(cola_listos) == 0 and len(procesos_pendientes) > 0:
                 siguiente_llegada = min(procesos_pendientes, key=lambda p: p.tiempo_arribo).tiempo_arribo
-                if tiempo_actual < siguiente_llegada:
-                    tiempo_actual = siguiente_llegada
+                while tiempo_actual < siguiente_llegada:
+                    self.historial_cpu.append("Inactivo")
+                    tiempo_actual += 1
             
-            # 1. Encolar los procesos que hayan llegado en este tiempo actual
+            # Encolar los procesos que hayan llegado en este tiempo actual
             llegados_ahora = [p for p in procesos_pendientes if p.tiempo_arribo <= tiempo_actual]
             # Ordenamos por llegada por si varios llegan al mismo tiempo
             llegados_ahora.sort(key=lambda p: p.tiempo_arribo) 
@@ -149,11 +155,14 @@ class Planificador:
                 # Calculamos cuánto tiempo va a estar en la CPU (el Quantum completo o lo que le quede)
                 tiempo_a_usar = min(proceso_actual.rafaga_restante, quantum)
                 
+                for _ in range(tiempo_a_usar):
+                    self.historial_cpu.append(proceso_actual.id)
+                
                 # Hacemos que el reloj global avance de un solo salto
                 tiempo_actual += tiempo_a_usar
                 proceso_actual.rafaga_restante -= tiempo_a_usar
                 
-                # --- LA TRAMPA DEL ROUND ROBIN (Paso 2) ---
+                
                 # Antes de volver a meter el proceso_actual al final de la cola (si no ha terminado),
                 # debemos dejar que entren a la cola los procesos que llegaron DURANTE este salto de tiempo.
                 llegados_durante_salto = [p for p in procesos_pendientes if p.tiempo_arribo <= tiempo_actual]
@@ -183,6 +192,7 @@ class Planificador:
     def simular_prioridades(self):
         print("\n--- Iniciando Simulación Prioridades (Expropiativo) ---")
         tiempo_actual = 0
+        self.historial_cpu = []
         
         procesos_pendientes = self.lista_procesos.copy()
         cola_listos = []
@@ -191,15 +201,15 @@ class Planificador:
 
         while procesos_completados < n:
             
-            # 1. Verificar quién acaba de llegar en este milisegundo
+            # Verificar quién acaba de llegar en este milisegundo
             llegados_ahora = [p for p in procesos_pendientes if p.tiempo_arribo == tiempo_actual]
             for p in llegados_ahora:
                 cola_listos.append(p)
                 procesos_pendientes.remove(p)
 
-            # 2. Si hay alguien en la cola, decidir quién usa la CPU
+            # Si hay alguien en la cola, decidir quién usa la CPU
             if len(cola_listos) > 0:
-                # LA MAGIA DE PRIORIDADES: Ordenamos por el atributo prioridad.
+                # Se ordena por prioridad.
                 # (Menor número = Mayor prioridad. Desempate por tiempo de arribo).
                 cola_listos.sort(key=lambda x: (x.prioridad, x.tiempo_arribo))
                 
@@ -209,10 +219,10 @@ class Planificador:
                 proceso_actual.registrar_ejecucion(tiempo_actual)
                 proceso_actual.estado = "Ejecutando"
                 
-                # El proceso consume 1 milisegundo de CPU
                 proceso_actual.rafaga_restante -= 1
+                self.historial_cpu.append(proceso_actual.id)
                 
-                # 3. ¿El proceso acaba de terminar?
+                # 
                 if proceso_actual.rafaga_restante == 0:
                     proceso_actual.tiempo_finalizacion = tiempo_actual + 1
                     proceso_actual.tiempo_retorno = proceso_actual.tiempo_finalizacion - proceso_actual.tiempo_arribo
@@ -224,7 +234,8 @@ class Planificador:
                     cola_listos.remove(proceso_actual)
                     procesos_completados += 1
                     
-                    print(f"[{proceso_actual.id}] Finalizó en ms: {tiempo_actual + 1} | Retorno: {proceso_actual.tiempo_retorno} | Espera: {proceso_actual.tiempo_espera}")
+                    print(f"[{proceso_actual.id}] Finalizó en ms: {tiempo_actual + 1} | Retorno: {proceso_actual.tiempo_retorno} | Espera: {proceso_actual.tiempo_espera}")                
+            else:
+                self.historial_cpu.append("Inactivo")
             
-            # Avanzamos el reloj maestro 1 milisegundo
             tiempo_actual += 1
