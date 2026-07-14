@@ -1,0 +1,7 @@
+# Dependencias del Simulador de Planificación de CPU
+# Instalar con:  pip install -r requirements.txt
+#
+# Nota: se usan estas versiones (más nuevas que las del anteproyecto) porque
+# son las que cuentan con wheels precompilados para Python 3.14.
+customtkinter==6.0.0
+matplotlib==3.11.0
